@@ -57,9 +57,8 @@ class DefaultFormer(BaseEstimator,TransformerMixin):
     
     def transform(self,X):
         return X
+    
 
-    
-    
 class DropImputer(BaseEstimator,TransformerMixin):
     def __init__(self):
         pass
@@ -70,8 +69,21 @@ class DropImputer(BaseEstimator,TransformerMixin):
     def transform(self,X):
         return pd.DataFrame(X).dropna(axis=0).values
     
-
     
+class CatIntFormer(BaseEstimator,TransformerMixin):
+    def __init__(self):
+        pass
+    
+    def fit(self,X,y=None):
+        return self
+    
+    def transform(self,X):
+        X_ = X.copy()
+        if X.dtype!=type(1):
+            X_ = (X_+0.5).astype(int)
+        return X_
+    
+
 class Catmapper(BaseEstimator,TransformerMixin):
     def __init__(self,cat_features):
         self.cat_features = list(cat_features)
@@ -112,10 +124,8 @@ class Transformer(BaseEstimator, TransformerMixin):
                 Scaler = StandardScaler()
             elif scaler is 'minmax':
                 Scaler = MinMaxScaler()
-            else:
-                raise Exception('scaler设置错误')
         except Exception as e:
-            print(e)
+            raise Exception('scaler设置错误')
         
         Imupter = self.get_imputer(imputer,fill_value,n_neighbors)
         
@@ -132,21 +142,22 @@ class Transformer(BaseEstimator, TransformerMixin):
             elif isCatted == 'ordinal':
                 Catter = OrdinalEncoder()
             elif isCatted == 'onehot':
-                Catter = OneHotEncoder()
-            else:
-                raise Exception('isCatted设置错误')
+                Catter = OneHotEncoder()  
         except Exception as e:
-            print(e)
+            raise Exception('isCatted设置错误')
         
         if cat_imputer is not None or isCatted is not None:
             assert cat_features is not None
             catmapper = Catmapper(cat_features)
+            cat_intformer = CatIntFormer()
         else:
             catmapper = DefaultFormer()
+            cat_intformer = DefaultFormer()
         
         
         cat_pipeline = Pipeline([
             ('cat_imputer',cat_Imupter),
+            ('cat_int_former',cat_intformer),
             ('catter',Catter),
         ])
         
@@ -177,7 +188,7 @@ class Transformer(BaseEstimator, TransformerMixin):
                     Imupter = SimpleImputer(strategy=imputer,fill_value=fill_value)
                 return Imupter
             except Exception as e:
-                print('imputer设置错误')
+                raise Exception('imputer设置错误')
               
     def fit(self,X,y=None):
         return self.full_pipeline.fit(X)
